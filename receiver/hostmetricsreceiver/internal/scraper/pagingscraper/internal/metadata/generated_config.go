@@ -48,6 +48,23 @@ func DefaultMetricsConfig() MetricsConfig {
 	}
 }
 
+func DefaultAllDisabledMetricsConfig() MetricsConfig {
+	return MetricsConfig{
+		SystemPagingFaults: MetricConfig{
+			Enabled: false,
+		},
+		SystemPagingOperations: MetricConfig{
+			Enabled: false,
+		},
+		SystemPagingUsage: MetricConfig{
+			Enabled: false,
+		},
+		SystemPagingUtilization: MetricConfig{
+			Enabled: false,
+		},
+	}
+}
+
 // MetricsBuilderConfig is a configuration for hostmetricsreceiver/paging metrics builder.
 type MetricsBuilderConfig struct {
 	Metrics MetricsConfig `mapstructure:"metrics"`

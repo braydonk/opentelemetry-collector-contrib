@@ -61,6 +61,22 @@ func TestMetricsBuilderConfig(t *testing.T) {
 	}
 }
 
+func TestDefaultAllDisabledMetricsConfig(t *testing.T) {
+	want := MetricsConfig{
+		SystemNetworkConnections:    MetricConfig{Enabled: false},
+		SystemNetworkConntrackCount: MetricConfig{Enabled: false},
+		SystemNetworkConntrackMax:   MetricConfig{Enabled: false},
+		SystemNetworkDropped:        MetricConfig{Enabled: false},
+		SystemNetworkErrors:         MetricConfig{Enabled: false},
+		SystemNetworkIo:             MetricConfig{Enabled: false},
+		SystemNetworkPackets:        MetricConfig{Enabled: false},
+	}
+	cfg := DefaultAllDisabledMetricsConfig()
+	if diff := cmp.Diff(want, cfg, cmpopts.IgnoreUnexported(MetricConfig{})); diff != "" {
+		t.Errorf("Config mismatch (-expected +actual):\n%s", diff)
+	}
+}
+
 func loadMetricsBuilderConfig(t *testing.T, name string) MetricsBuilderConfig {
 	cm, err := confmaptest.LoadConf(filepath.Join("testdata", "config.yaml"))
 	require.NoError(t, err)

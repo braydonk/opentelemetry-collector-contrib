@@ -44,6 +44,20 @@ func DefaultMetricsConfig() MetricsConfig {
 	}
 }
 
+func DefaultAllDisabledMetricsConfig() MetricsConfig {
+	return MetricsConfig{
+		SystemLinuxMemoryAvailable: MetricConfig{
+			Enabled: false,
+		},
+		SystemMemoryUsage: MetricConfig{
+			Enabled: false,
+		},
+		SystemMemoryUtilization: MetricConfig{
+			Enabled: false,
+		},
+	}
+}
+
 // MetricsBuilderConfig is a configuration for hostmetricsreceiver/memory metrics builder.
 type MetricsBuilderConfig struct {
 	Metrics MetricsConfig `mapstructure:"metrics"`

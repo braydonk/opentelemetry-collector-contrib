@@ -12,7 +12,6 @@ import (
 	"go.opentelemetry.io/collector/receiver/scraperhelper"
 
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/processscraper/internal/metadata"
 )
 
 // This file implements Factory for Process scraper.
@@ -23,14 +22,11 @@ const (
 )
 
 // Factory is the Factory for scraper.
-type Factory struct {
-}
+type Factory struct{}
 
 // CreateDefaultConfig creates the default configuration for the Scraper.
 func (f *Factory) CreateDefaultConfig() internal.Config {
-	return &Config{
-		MetricsBuilderConfig: metadata.DefaultMetricsBuilderConfig(),
-	}
+	return CreateNewDefaultConfig()
 }
 
 // CreateMetricsScraper creates a resource scraper based on provided config.
@@ -53,4 +49,20 @@ func (f *Factory) CreateMetricsScraper(
 		s.scrape,
 		scraperhelper.WithStart(s.start),
 	)
+}
+
+type ProcessesFactory struct{}
+
+// CreateDefaultConfig creates the default configuration for the Scraper.
+func (f *ProcessesFactory) CreateDefaultConfig() internal.Config {
+	return CreateNewDefaultProcessesConfig()
+}
+
+// CreateMetricsScraper creates a resource scraper based on provided config.
+func (f *ProcessesFactory) CreateMetricsScraper(
+	_ context.Context,
+	settings receiver.CreateSettings,
+	cfg internal.Config,
+) (scraperhelper.Scraper, error) {
+	return nil, errors.New("processes factory error: this factory cannot create a metric scraper")
 }

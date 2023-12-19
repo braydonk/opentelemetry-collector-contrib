@@ -57,6 +57,20 @@ func TestMetricsBuilderConfig(t *testing.T) {
 	}
 }
 
+func TestDefaultAllDisabledMetricsConfig(t *testing.T) {
+	want := MetricsConfig{
+		SystemCPUFrequency:     MetricConfig{Enabled: false},
+		SystemCPULogicalCount:  MetricConfig{Enabled: false},
+		SystemCPUPhysicalCount: MetricConfig{Enabled: false},
+		SystemCPUTime:          MetricConfig{Enabled: false},
+		SystemCPUUtilization:   MetricConfig{Enabled: false},
+	}
+	cfg := DefaultAllDisabledMetricsConfig()
+	if diff := cmp.Diff(want, cfg, cmpopts.IgnoreUnexported(MetricConfig{})); diff != "" {
+		t.Errorf("Config mismatch (-expected +actual):\n%s", diff)
+	}
+}
+
 func loadMetricsBuilderConfig(t *testing.T, name string) MetricsBuilderConfig {
 	cm, err := confmaptest.LoadConf(filepath.Join("testdata", "config.yaml"))
 	require.NoError(t, err)

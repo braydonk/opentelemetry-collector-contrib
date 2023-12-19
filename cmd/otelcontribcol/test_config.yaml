@@ -1,0 +1,15 @@
+receivers:
+  hostmetrics:
+    scrapers:
+      processes:
+      process:
+
+exporters:
+  file:
+    path: out.json
+
+service:
+  pipelines:
+    metrics:
+      receivers: [hostmetrics]
+      exporters: [file]

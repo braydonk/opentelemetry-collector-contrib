@@ -22,7 +22,6 @@ import (
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/memoryscraper"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/networkscraper"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/pagingscraper"
-	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/processesscraper"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/hostmetricsreceiver/internal/scraper/processscraper"
 )
 
@@ -36,8 +35,8 @@ var (
 		memoryscraper.TypeStr:     &memoryscraper.Factory{},
 		networkscraper.TypeStr:    &networkscraper.Factory{},
 		pagingscraper.TypeStr:     &pagingscraper.Factory{},
-		processesscraper.TypeStr:  &processesscraper.Factory{},
 		processscraper.TypeStr:    &processscraper.Factory{},
+		"processes":               &processscraper.ProcessesFactory{},
 	}
 )
 
@@ -92,7 +91,17 @@ func createAddScraperOptions(
 ) ([]scraperhelper.ScraperControllerOption, error) {
 	scraperControllerOptions := make([]scraperhelper.ScraperControllerOption, 0, len(config.Scrapers))
 
+	var processScraperConfig internal.Config = nil
+	var processesScraperConfig internal.Config = nil
 	for key, cfg := range config.Scrapers {
+		if key == "process" {
+			processScraperConfig = cfg
+			continue
+		}
+		if key == "processes" {
+			processesScraperConfig = cfg
+			continue
+		}
 		hostMetricsScraper, ok, err := createHostMetricsScraper(ctx, set, key, cfg, factories)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create scraper for key %q: %w", key, err)
@@ -104,6 +113,14 @@ func createAddScraperOptions(
 		}
 
 		return nil, fmt.Errorf("host metrics scraper factory not found for key: %q", key)
+	}
+
+	if processScraperConfig != nil || processesScraperConfig != nil {
+		processScraper, err := createProcessScraper(ctx, set, processScraperConfig, processesScraperConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create scraper for keys process/processscraper: %v", err)
+		}
+		scraperControllerOptions = append(scraperControllerOptions, scraperhelper.AddScraper(processScraper))
 	}
 
 	return scraperControllerOptions, nil
@@ -119,6 +136,11 @@ func createHostMetricsScraper(ctx context.Context, set receiver.CreateSettings, 
 	ok = true
 	scraper, err = factory.CreateMetricsScraper(ctx, set, cfg)
 	return
+}
+
+func createProcessScraper(ctx context.Context, set receiver.CreateSettings, processCfg, processesCfg internal.Config) (scraperhelper.Scraper, error) {
+	cfg := processscraper.CreateNewConfig(processCfg.(*processscraper.Config), processesCfg.(*processscraper.ProcessesConfig))
+	return (&processscraper.Factory{}).CreateMetricsScraper(ctx, set, cfg)
 }
 
 type environment interface {

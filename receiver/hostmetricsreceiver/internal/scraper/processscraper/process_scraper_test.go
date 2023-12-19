@@ -475,6 +475,11 @@ func (p *processHandleMock) RlimitUsageWithContext(ctx context.Context, b bool) 
 	return args.Get(0).([]process.RlimitStat), args.Error(1)
 }
 
+func (p *processHandleMock) Status() ([]string, error) {
+	args := p.MethodCalled("Status")
+	return args.Get(0).([]string), args.Error(1)
+}
+
 func initDefaultsHandleMock(t mock.TestingT, handleMock *processHandleMock) {
 	if !handleMock.IsMethodCallable(t, "UsernameWithContext", mock.Anything) {
 		handleMock.On("UsernameWithContext", mock.Anything).Return("username", nil)
@@ -526,6 +531,9 @@ func initDefaultsHandleMock(t mock.TestingT, handleMock *processHandleMock) {
 	}
 	if !handleMock.IsMethodCallable(t, "ExeWithContext", mock.Anything) {
 		handleMock.On("ExeWithContext", mock.Anything).Return("processname", nil)
+	}
+	if !handleMock.IsMethodCallable(t, "Status", mock.Anything) {
+		handleMock.On("Status", mock.Anything).Return([]string{}, nil)
 	}
 }
 

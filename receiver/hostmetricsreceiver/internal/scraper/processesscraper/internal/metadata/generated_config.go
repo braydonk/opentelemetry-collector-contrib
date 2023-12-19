@@ -40,6 +40,17 @@ func DefaultMetricsConfig() MetricsConfig {
 	}
 }
 
+func DefaultAllDisabledMetricsConfig() MetricsConfig {
+	return MetricsConfig{
+		SystemProcessesCount: MetricConfig{
+			Enabled: false,
+		},
+		SystemProcessesCreated: MetricConfig{
+			Enabled: false,
+		},
+	}
+}
+
 // MetricsBuilderConfig is a configuration for hostmetricsreceiver/processes metrics builder.
 type MetricsBuilderConfig struct {
 	Metrics MetricsConfig `mapstructure:"metrics"`

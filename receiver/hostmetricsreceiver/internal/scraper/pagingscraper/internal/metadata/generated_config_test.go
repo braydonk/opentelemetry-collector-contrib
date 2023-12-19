@@ -55,6 +55,19 @@ func TestMetricsBuilderConfig(t *testing.T) {
 	}
 }
 
+func TestDefaultAllDisabledMetricsConfig(t *testing.T) {
+	want := MetricsConfig{
+		SystemPagingFaults:      MetricConfig{Enabled: false},
+		SystemPagingOperations:  MetricConfig{Enabled: false},
+		SystemPagingUsage:       MetricConfig{Enabled: false},
+		SystemPagingUtilization: MetricConfig{Enabled: false},
+	}
+	cfg := DefaultAllDisabledMetricsConfig()
+	if diff := cmp.Diff(want, cfg, cmpopts.IgnoreUnexported(MetricConfig{})); diff != "" {
+		t.Errorf("Config mismatch (-expected +actual):\n%s", diff)
+	}
+}
+
 func loadMetricsBuilderConfig(t *testing.T, name string) MetricsBuilderConfig {
 	cm, err := confmaptest.LoadConf(filepath.Join("testdata", "config.yaml"))
 	require.NoError(t, err)

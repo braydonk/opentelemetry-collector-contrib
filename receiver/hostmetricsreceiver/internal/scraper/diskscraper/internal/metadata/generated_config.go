@@ -60,6 +60,32 @@ func DefaultMetricsConfig() MetricsConfig {
 	}
 }
 
+func DefaultAllDisabledMetricsConfig() MetricsConfig {
+	return MetricsConfig{
+		SystemDiskIo: MetricConfig{
+			Enabled: false,
+		},
+		SystemDiskIoTime: MetricConfig{
+			Enabled: false,
+		},
+		SystemDiskMerged: MetricConfig{
+			Enabled: false,
+		},
+		SystemDiskOperationTime: MetricConfig{
+			Enabled: false,
+		},
+		SystemDiskOperations: MetricConfig{
+			Enabled: false,
+		},
+		SystemDiskPendingOperations: MetricConfig{
+			Enabled: false,
+		},
+		SystemDiskWeightedIoTime: MetricConfig{
+			Enabled: false,
+		},
+	}
+}
+
 // MetricsBuilderConfig is a configuration for hostmetricsreceiver/disk metrics builder.
 type MetricsBuilderConfig struct {
 	Metrics MetricsConfig `mapstructure:"metrics"`

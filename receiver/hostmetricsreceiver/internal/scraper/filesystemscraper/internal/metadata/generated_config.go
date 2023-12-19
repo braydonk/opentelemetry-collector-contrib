@@ -44,6 +44,20 @@ func DefaultMetricsConfig() MetricsConfig {
 	}
 }
 
+func DefaultAllDisabledMetricsConfig() MetricsConfig {
+	return MetricsConfig{
+		SystemFilesystemInodesUsage: MetricConfig{
+			Enabled: false,
+		},
+		SystemFilesystemUsage: MetricConfig{
+			Enabled: false,
+		},
+		SystemFilesystemUtilization: MetricConfig{
+			Enabled: false,
+		},
+	}
+}
+
 // MetricsBuilderConfig is a configuration for hostmetricsreceiver/filesystem metrics builder.
 type MetricsBuilderConfig struct {
 	Metrics MetricsConfig `mapstructure:"metrics"`

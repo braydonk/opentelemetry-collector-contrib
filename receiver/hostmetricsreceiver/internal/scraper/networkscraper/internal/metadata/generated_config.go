@@ -60,6 +60,32 @@ func DefaultMetricsConfig() MetricsConfig {
 	}
 }
 
+func DefaultAllDisabledMetricsConfig() MetricsConfig {
+	return MetricsConfig{
+		SystemNetworkConnections: MetricConfig{
+			Enabled: false,
+		},
+		SystemNetworkConntrackCount: MetricConfig{
+			Enabled: false,
+		},
+		SystemNetworkConntrackMax: MetricConfig{
+			Enabled: false,
+		},
+		SystemNetworkDropped: MetricConfig{
+			Enabled: false,
+		},
+		SystemNetworkErrors: MetricConfig{
+			Enabled: false,
+		},
+		SystemNetworkIo: MetricConfig{
+			Enabled: false,
+		},
+		SystemNetworkPackets: MetricConfig{
+			Enabled: false,
+		},
+	}
+}
+
 // MetricsBuilderConfig is a configuration for hostmetricsreceiver/network metrics builder.
 type MetricsBuilderConfig struct {
 	Metrics MetricsConfig `mapstructure:"metrics"`

@@ -44,6 +44,20 @@ func DefaultMetricsConfig() MetricsConfig {
 	}
 }
 
+func DefaultAllDisabledMetricsConfig() MetricsConfig {
+	return MetricsConfig{
+		SystemCPULoadAverage15m: MetricConfig{
+			Enabled: false,
+		},
+		SystemCPULoadAverage1m: MetricConfig{
+			Enabled: false,
+		},
+		SystemCPULoadAverage5m: MetricConfig{
+			Enabled: false,
+		},
+	}
+}
+
 // MetricsBuilderConfig is a configuration for hostmetricsreceiver/load metrics builder.
 type MetricsBuilderConfig struct {
 	Metrics MetricsConfig `mapstructure:"metrics"`

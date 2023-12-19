@@ -49,3 +49,43 @@ type MatchConfig struct {
 
 	Names []string `mapstructure:"names"`
 }
+
+type ProcessesConfig struct {
+	// MetricsBuilderConfig allows to customize scraped metrics/attributes representation.
+	metadata.MetricsBuilderConfig `mapstructure:",squash"`
+	internal.ScraperConfig
+}
+
+func CreateNewDefaultConfig() *Config {
+	return &Config{
+		MetricsBuilderConfig: metadata.DefaultMetricsBuilderConfig(),
+	}
+}
+
+func CreateNewAllDisabledConfig() *Config {
+	cfg := CreateNewDefaultConfig()
+	cfg.MetricsBuilderConfig.Metrics = metadata.DefaultAllDisabledMetricsConfig()
+	return cfg
+}
+
+func CreateNewDefaultProcessesConfig() *ProcessesConfig {
+	mbCfg := metadata.DefaultMetricsBuilderConfig()
+	mbCfg.Metrics = metadata.DefaultAllDisabledMetricsConfig()
+	mbCfg.Metrics.SystemProcessesCount.Enabled = true
+	mbCfg.Metrics.SystemProcessesCreated.Enabled = true
+	return &ProcessesConfig{
+		MetricsBuilderConfig: mbCfg,
+	}
+}
+
+func CreateNewConfig(processCfg *Config, processesCfg *ProcessesConfig) *Config {
+	cfg := processCfg
+	if processCfg == nil {
+		cfg = CreateNewAllDisabledConfig()
+	}
+	if processesCfg != nil {
+		cfg.MetricsBuilderConfig.Metrics.SystemProcessesCount = processesCfg.MetricsBuilderConfig.Metrics.SystemProcessesCount
+		cfg.MetricsBuilderConfig.Metrics.SystemProcessesCreated = processesCfg.MetricsBuilderConfig.Metrics.SystemProcessesCreated
+	}
+	return cfg
+}

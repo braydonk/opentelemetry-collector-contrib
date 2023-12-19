@@ -38,6 +38,8 @@ type MetricsConfig struct {
 	ProcessPagingFaults        MetricConfig `mapstructure:"process.paging.faults"`
 	ProcessSignalsPending      MetricConfig `mapstructure:"process.signals_pending"`
 	ProcessThreads             MetricConfig `mapstructure:"process.threads"`
+	SystemProcessesCount       MetricConfig `mapstructure:"system.processes.count"`
+	SystemProcessesCreated     MetricConfig `mapstructure:"system.processes.created"`
 }
 
 func DefaultMetricsConfig() MetricsConfig {
@@ -79,6 +81,62 @@ func DefaultMetricsConfig() MetricsConfig {
 			Enabled: false,
 		},
 		ProcessThreads: MetricConfig{
+			Enabled: false,
+		},
+		SystemProcessesCount: MetricConfig{
+			Enabled: false,
+		},
+		SystemProcessesCreated: MetricConfig{
+			Enabled: false,
+		},
+	}
+}
+
+func DefaultAllDisabledMetricsConfig() MetricsConfig {
+	return MetricsConfig{
+		ProcessContextSwitches: MetricConfig{
+			Enabled: false,
+		},
+		ProcessCPUTime: MetricConfig{
+			Enabled: false,
+		},
+		ProcessCPUUtilization: MetricConfig{
+			Enabled: false,
+		},
+		ProcessDiskIo: MetricConfig{
+			Enabled: false,
+		},
+		ProcessDiskOperations: MetricConfig{
+			Enabled: false,
+		},
+		ProcessHandles: MetricConfig{
+			Enabled: false,
+		},
+		ProcessMemoryUsage: MetricConfig{
+			Enabled: false,
+		},
+		ProcessMemoryUtilization: MetricConfig{
+			Enabled: false,
+		},
+		ProcessMemoryVirtual: MetricConfig{
+			Enabled: false,
+		},
+		ProcessOpenFileDescriptors: MetricConfig{
+			Enabled: false,
+		},
+		ProcessPagingFaults: MetricConfig{
+			Enabled: false,
+		},
+		ProcessSignalsPending: MetricConfig{
+			Enabled: false,
+		},
+		ProcessThreads: MetricConfig{
+			Enabled: false,
+		},
+		SystemProcessesCount: MetricConfig{
+			Enabled: false,
+		},
+		SystemProcessesCreated: MetricConfig{
 			Enabled: false,
 		},
 	}

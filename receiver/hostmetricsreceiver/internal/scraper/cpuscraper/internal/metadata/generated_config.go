@@ -52,6 +52,26 @@ func DefaultMetricsConfig() MetricsConfig {
 	}
 }
 
+func DefaultAllDisabledMetricsConfig() MetricsConfig {
+	return MetricsConfig{
+		SystemCPUFrequency: MetricConfig{
+			Enabled: false,
+		},
+		SystemCPULogicalCount: MetricConfig{
+			Enabled: false,
+		},
+		SystemCPUPhysicalCount: MetricConfig{
+			Enabled: false,
+		},
+		SystemCPUTime: MetricConfig{
+			Enabled: false,
+		},
+		SystemCPUUtilization: MetricConfig{
+			Enabled: false,
+		},
+	}
+}
+
 // MetricsBuilderConfig is a configuration for hostmetricsreceiver/cpu metrics builder.
 type MetricsBuilderConfig struct {
 	Metrics MetricsConfig `mapstructure:"metrics"`

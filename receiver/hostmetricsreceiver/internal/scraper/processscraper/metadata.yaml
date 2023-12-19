@@ -48,6 +48,11 @@ resource_attributes:
     type: string
 
 attributes:
+  status:
+    description: Breakdown status of the processes.
+    type: string
+    enum: [blocked, daemon, detached, idle, locked, orphan, paging, running, sleeping, stopped, system, unknown, zombies]
+
   direction:
     description: Direction of flow of bytes (read or write).
     type: string
@@ -71,6 +76,25 @@ attributes:
     enum: [involuntary, voluntary]
 
 metrics:
+  system.processes.created:
+    enabled: false
+    description: Total number of created processes on the system.
+    unit: "{processes}"
+    sum:
+      value_type: int
+      aggregation_temporality: cumulative
+      monotonic: true
+
+  system.processes.count:
+    enabled: false
+    description: Total number of processes in each state on the system.
+    unit: "{processes}"
+    sum:
+      value_type: int
+      aggregation_temporality: cumulative
+      monotonic: false
+    attributes: [status]
+
   process.cpu.time:
     enabled: true
     description: Total CPU seconds broken down by different states.
@@ -176,7 +200,7 @@ metrics:
       value_type: int
       aggregation_temporality: cumulative
       monotonic: false
-  
+
   process.context_switches:
     enabled: false
     description: Number of times the process has been context switched.

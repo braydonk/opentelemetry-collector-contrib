@@ -39,6 +39,8 @@ func TestMetricsBuilderConfig(t *testing.T) {
 					ProcessPagingFaults:        MetricConfig{Enabled: true},
 					ProcessSignalsPending:      MetricConfig{Enabled: true},
 					ProcessThreads:             MetricConfig{Enabled: true},
+					SystemProcessesCount:       MetricConfig{Enabled: true},
+					SystemProcessesCreated:     MetricConfig{Enabled: true},
 				},
 				ResourceAttributes: ResourceAttributesConfig{
 					ProcessCommand:        ResourceAttributeConfig{Enabled: true},
@@ -68,6 +70,8 @@ func TestMetricsBuilderConfig(t *testing.T) {
 					ProcessPagingFaults:        MetricConfig{Enabled: false},
 					ProcessSignalsPending:      MetricConfig{Enabled: false},
 					ProcessThreads:             MetricConfig{Enabled: false},
+					SystemProcessesCount:       MetricConfig{Enabled: false},
+					SystemProcessesCreated:     MetricConfig{Enabled: false},
 				},
 				ResourceAttributes: ResourceAttributesConfig{
 					ProcessCommand:        ResourceAttributeConfig{Enabled: false},
@@ -88,6 +92,30 @@ func TestMetricsBuilderConfig(t *testing.T) {
 				t.Errorf("Config mismatch (-expected +actual):\n%s", diff)
 			}
 		})
+	}
+}
+
+func TestDefaultAllDisabledMetricsConfig(t *testing.T) {
+	want := MetricsConfig{
+		ProcessContextSwitches:     MetricConfig{Enabled: false},
+		ProcessCPUTime:             MetricConfig{Enabled: false},
+		ProcessCPUUtilization:      MetricConfig{Enabled: false},
+		ProcessDiskIo:              MetricConfig{Enabled: false},
+		ProcessDiskOperations:      MetricConfig{Enabled: false},
+		ProcessHandles:             MetricConfig{Enabled: false},
+		ProcessMemoryUsage:         MetricConfig{Enabled: false},
+		ProcessMemoryUtilization:   MetricConfig{Enabled: false},
+		ProcessMemoryVirtual:       MetricConfig{Enabled: false},
+		ProcessOpenFileDescriptors: MetricConfig{Enabled: false},
+		ProcessPagingFaults:        MetricConfig{Enabled: false},
+		ProcessSignalsPending:      MetricConfig{Enabled: false},
+		ProcessThreads:             MetricConfig{Enabled: false},
+		SystemProcessesCount:       MetricConfig{Enabled: false},
+		SystemProcessesCreated:     MetricConfig{Enabled: false},
+	}
+	cfg := DefaultAllDisabledMetricsConfig()
+	if diff := cmp.Diff(want, cfg, cmpopts.IgnoreUnexported(MetricConfig{})); diff != "" {
+		t.Errorf("Config mismatch (-expected +actual):\n%s", diff)
 	}
 }
 

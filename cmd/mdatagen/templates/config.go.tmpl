@@ -43,6 +43,17 @@ func DefaultMetricsConfig() MetricsConfig {
 		{{- end }}
 	}
 }
+
+func DefaultAllDisabledMetricsConfig() MetricsConfig {
+	return MetricsConfig{
+		{{- range $name, $metric := .Metrics }}
+		{{ $name.Render }}: MetricConfig{
+			Enabled: false,
+		},
+		{{- end }}
+	}
+}
+
 {{- end }}
 
 {{ if .ResourceAttributes -}}
