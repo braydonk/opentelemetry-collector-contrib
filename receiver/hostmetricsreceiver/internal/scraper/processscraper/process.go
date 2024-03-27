@@ -32,6 +32,8 @@ type processMetadata struct {
 	username   string
 	handle     processHandle
 	createTime int64
+	cpuTimes   *cpu.TimesStat
+	faults     *process.PageFaultsStat
 }
 
 type executableMetadata struct {

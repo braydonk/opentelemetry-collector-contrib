@@ -122,7 +122,7 @@ func (s *scraper) scrape(ctx context.Context) (pmetric.Metrics, error) {
 
 		now := pcommon.NewTimestampFromTime(time.Now())
 
-		if err = s.scrapeAndAppendCPUTimeMetric(ctx, now, md.handle, md.pid); err != nil {
+		if err = s.scrapeAndAppendCPUTimeMetric(ctx, now, md); err != nil {
 			errs.AddPartial(cpuMetricsLen, fmt.Errorf("error reading cpu times for process %q (pid %v): %w", md.executable.name, md.pid, err))
 		}
 
@@ -138,7 +138,7 @@ func (s *scraper) scrape(ctx context.Context) (pmetric.Metrics, error) {
 			errs.AddPartial(diskMetricsLen, fmt.Errorf("error reading disk usage for process %q (pid %v): %w", md.executable.name, md.pid, err))
 		}
 
-		if err = s.scrapeAndAppendPagingMetric(ctx, now, md.handle); err != nil {
+		if err = s.scrapeAndAppendPagingMetric(ctx, now, md); err != nil {
 			errs.AddPartial(pagingMetricsLen, fmt.Errorf("error reading memory paging info for process %q (pid %v): %w", md.executable.name, md.pid, err))
 		}
 
@@ -198,6 +198,8 @@ func (s *scraper) getProcessMetadata() ([]*processMetadata, error) {
 		pid := handles.Pid(i)
 		handle := handles.At(i)
 
+		_, ppid, times, ctime, _, _, faults, _ := getStatData(pid, -1)
+
 		exe, err := getProcessExecutable(ctx, handle)
 		if err != nil {
 			if !s.config.MuteProcessExeError {
@@ -240,17 +242,19 @@ func (s *scraper) getProcessMetadata() ([]*processMetadata, error) {
 			}
 		}
 
-		createTime, err := s.getProcessCreateTime(handle, ctx)
-		if err != nil {
-			errs.AddPartial(0, fmt.Errorf("error reading create time for process %q (pid %v): %w", executable.name, pid, err))
-			// set the start time to now to avoid including this when a scrape_process_delay is set
-			createTime = time.Now().UnixMilli()
-		}
+		createTime := ctime
+		// createTime, err := s.getProcessCreateTime(handle, ctx)
+		// if err != nil {
+		// 	errs.AddPartial(0, fmt.Errorf("error reading create time for process %q (pid %v): %w", executable.name, pid, err))
+		// 	// set the start time to now to avoid including this when a scrape_process_delay is set
+		// 	createTime = time.Now().UnixMilli()
+		// }
 		if s.scrapeProcessDelay.Milliseconds() > (time.Now().UnixMilli() - createTime) {
 			continue
 		}
 
-		parentPid, err := parentPid(ctx, handle, pid)
+		// parentPid, err := parentPid(ctx, handle, pid)
+		parentPid := ppid
 		if err != nil {
 			errs.AddPartial(0, fmt.Errorf("error reading parent pid for process %q (pid %v): %w", executable.name, pid, err))
 		}
@@ -263,6 +267,8 @@ func (s *scraper) getProcessMetadata() ([]*processMetadata, error) {
 			username:   username,
 			handle:     handle,
 			createTime: createTime,
+			cpuTimes:   times,
+			faults:     faults,
 		}
 
 		data = append(data, md)
@@ -271,29 +277,29 @@ func (s *scraper) getProcessMetadata() ([]*processMetadata, error) {
 	return data, errs.Combine()
 }
 
-func (s *scraper) scrapeAndAppendCPUTimeMetric(ctx context.Context, now pcommon.Timestamp, handle processHandle, pid int32) error {
+func (s *scraper) scrapeAndAppendCPUTimeMetric(_ context.Context, now pcommon.Timestamp, md *processMetadata) error {
 	if !s.config.MetricsBuilderConfig.Metrics.ProcessCPUTime.Enabled && !s.config.MetricsBuilderConfig.Metrics.ProcessCPUUtilization.Enabled {
 		return nil
 	}
 
-	times, err := handle.TimesWithContext(ctx)
-	if err != nil {
-		return err
-	}
+	// times, err := md.handle.TimesWithContext(ctx)
+	// if err != nil {
+	// 	return err
+	// }
 
 	if s.config.MetricsBuilderConfig.Metrics.ProcessCPUTime.Enabled {
-		s.recordCPUTimeMetric(now, times)
+		s.recordCPUTimeMetric(now, md.cpuTimes)
 	}
 
 	if !s.config.MetricsBuilderConfig.Metrics.ProcessCPUUtilization.Enabled {
 		return nil
 	}
 
-	if _, ok := s.ucals[pid]; !ok {
-		s.ucals[pid] = &ucal.CPUUtilizationCalculator{}
+	if _, ok := s.ucals[md.pid]; !ok {
+		s.ucals[md.pid] = &ucal.CPUUtilizationCalculator{}
 	}
 
-	err = s.ucals[pid].CalculateAndRecord(now, s.logicalCores, times, s.recordCPUUtilization)
+	err := s.ucals[md.pid].CalculateAndRecord(now, s.logicalCores, md.cpuTimes, s.recordCPUUtilization)
 	return err
 }
 
@@ -348,18 +354,13 @@ func (s *scraper) scrapeAndAppendDiskMetrics(ctx context.Context, now pcommon.Ti
 	return nil
 }
 
-func (s *scraper) scrapeAndAppendPagingMetric(ctx context.Context, now pcommon.Timestamp, handle processHandle) error {
+func (s *scraper) scrapeAndAppendPagingMetric(_ context.Context, now pcommon.Timestamp, md *processMetadata) error {
 	if !s.config.MetricsBuilderConfig.Metrics.ProcessPagingFaults.Enabled {
 		return nil
 	}
 
-	pageFaultsStat, err := handle.PageFaultsWithContext(ctx)
-	if err != nil {
-		return err
-	}
-
-	s.mb.RecordProcessPagingFaultsDataPoint(now, int64(pageFaultsStat.MajorFaults), metadata.AttributePagingFaultTypeMajor)
-	s.mb.RecordProcessPagingFaultsDataPoint(now, int64(pageFaultsStat.MinorFaults), metadata.AttributePagingFaultTypeMinor)
+	s.mb.RecordProcessPagingFaultsDataPoint(now, int64(md.faults.MajorFaults), metadata.AttributePagingFaultTypeMajor)
+	s.mb.RecordProcessPagingFaultsDataPoint(now, int64(md.faults.MinorFaults), metadata.AttributePagingFaultTypeMinor)
 
 	return nil
 }
