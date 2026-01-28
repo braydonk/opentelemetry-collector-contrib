@@ -24,11 +24,10 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-const DefaultWeaverPort = 4317
+const DefaultWeaverOTLPListenerPort = "4317/tcp"
 
 var (
 	ErrOptionValidation = errors.New("weaver options failed validation")
-	ErrPortOutOfRange   = errors.New("port number out of valid range (1-65535)")
 )
 
 type WeaverContext struct {
@@ -62,25 +61,13 @@ func NewWeaverContext(ctx context.Context, opts *WeaverOptions) (*WeaverContext,
 		return nil, err
 	}
 
-	// exporters, err := newOTLPExporterContext(ctx, opts.endpoint())
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// err = exporters.start()
-	// if err != nil {
-	// 	return nil, err
-	// }
+	// Upon creating the container, we can gather the host and the mapped port
+	// it chose and use that to construct the pdata clients.
 	host, err := weaverC.Host(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	exposePort := DefaultWeaverPort
-	if opts.Port != 0 {
-		exposePort = opts.Port
-	}
-
-	mappedPort, err := weaverC.MappedPort(ctx, nat.Port(fmt.Sprintf("%d/tcp", exposePort)))
+	mappedPort, err := weaverC.MappedPort(ctx, nat.Port(DefaultWeaverOTLPListenerPort))
 	if err != nil {
 		return nil, err
 	}
@@ -140,8 +127,6 @@ func (wc *WeaverContext) TestLogs(logs plog.Logs) error {
 
 type WeaverOptions struct {
 	Version  string
-	Address  string
-	Port     int
 	Registry string
 }
 
@@ -155,16 +140,6 @@ func NewDefaultWeaverOptions() *WeaverOptions {
 // valid options.
 func (opts *WeaverOptions) validate() error {
 	errs := []error{}
-	// The port being 0 means unset because Go is like that. :)
-	// Luckily, we don't want to allow 0 as a valid option anyway,
-	// since that functionally makes the networking stack pick a
-	// random port for the request, which would be useless in this
-	// scenario. So it will be ignored as if unset (even if set manually).
-	//
-	// Otherwise, validate that the port is within the valid port range.
-	if opts.Port != 0 && (opts.Port < 0 || 65535 < opts.Port) {
-		errs = append(errs, fmt.Errorf("%w: %d", ErrPortOutOfRange, opts.Port))
-	}
 
 	if err := errors.Join(errs...); err != nil {
 		return fmt.Errorf("%w: %w", ErrOptionValidation, err)
@@ -185,11 +160,7 @@ func (opts *WeaverOptions) testContainerOptions() []testcontainers.ContainerCust
 	}
 
 	// Expose the required port on the container.
-	exposePort := DefaultWeaverPort
-	if opts.Port != 0 {
-		exposePort = opts.Port
-	}
-	containerOpts = append(containerOpts, testcontainers.WithExposedPorts(fmt.Sprintf("%d", exposePort)))
+	containerOpts = append(containerOpts, testcontainers.WithExposedPorts(DefaultWeaverOTLPListenerPort))
 
 	return containerOpts
 }
@@ -199,32 +170,12 @@ func (opts *WeaverOptions) testContainerOptions() []testcontainers.ContainerCust
 // Usage docs: https://github.com/open-telemetry/weaver/blob/main/docs/usage.md#registry-live-check
 func (opts *WeaverOptions) cmdArgs() []string {
 	args := []string{"registry", "live-check"}
-	if opts.Port != 0 {
-		args = append(args, "--otlp-grpc-port", fmt.Sprintf("%d", opts.Port))
-	}
-	if opts.Address != "" {
-		args = append(args, "--otlp-grpc-address", opts.Address)
-	}
 	if opts.Registry != "" {
 		args = append(args, "--registry", opts.Registry)
 	}
-	args = append(args, "--diagnostic-format", "json")
+	args = append(args, "--format", "json")
 	fmt.Println(args)
 	return args
-}
-
-// endpoint will construct an endpoint usable by exporter settings
-// using the default values or provided options.
-func (opts *WeaverOptions) endpoint() string {
-	address := "localhost"
-	if opts.Address != "" {
-		address = opts.Address
-	}
-	port := DefaultWeaverPort
-	if opts.Port != 0 {
-		port = opts.Port
-	}
-	return fmt.Sprintf("%s:%d", address, port)
 }
 
 type pdataClientContext struct {
