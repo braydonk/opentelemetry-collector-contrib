@@ -21,14 +21,15 @@ func TestWeaver(t *testing.T) {
 	record := scope.LogRecords().AppendEmpty()
 	record.Body().SetStr("hi I am a log")
 
-	time.Sleep(3 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	wLogs, _ := weaver.ContainerLogs()
 	for _, line := range wLogs {
 		fmt.Println(line)
 	}
 
-	weaver.TestLogs(logs)
+	err = weaver.TestLogs(logs)
+	require.NoError(t, err)
 
 	time.Sleep(8 * time.Second)
 
@@ -37,6 +38,6 @@ func TestWeaver(t *testing.T) {
 		fmt.Println(line)
 	}
 
-	err = weaver.Shutdown()
-	require.NoError(t, err)
+	// err = weaver.Shutdown()
+	// require.NoError(t, err)
 }

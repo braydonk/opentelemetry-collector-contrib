@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/docker/go-connections/nat"
 	"github.com/testcontainers/testcontainers-go"
 	"go.opentelemetry.io/collector/component"
 	"go.opentelemetry.io/collector/component/componenttest"
@@ -14,8 +15,13 @@ import (
 	"go.opentelemetry.io/collector/exporter"
 	"go.opentelemetry.io/collector/exporter/otlpexporter"
 	"go.opentelemetry.io/collector/pdata/plog"
+	"go.opentelemetry.io/collector/pdata/plog/plogotlp"
 	"go.opentelemetry.io/collector/pdata/pmetric"
+	"go.opentelemetry.io/collector/pdata/pmetric/pmetricotlp"
 	"go.opentelemetry.io/collector/pdata/ptrace"
+	"go.opentelemetry.io/collector/pdata/ptrace/ptraceotlp"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 const DefaultWeaverPort = 4317
@@ -30,6 +36,7 @@ type WeaverContext struct {
 	weaverContainer *testcontainers.DockerContainer
 	opts            *WeaverOptions
 	exporters       *otlpExporterContext
+	clients         *pdataClientContext
 }
 
 // NewWeaverContext returns a weaver context customized with the provided options.
@@ -55,11 +62,30 @@ func NewWeaverContext(ctx context.Context, opts *WeaverOptions) (*WeaverContext,
 		return nil, err
 	}
 
-	exporters, err := newOTLPExporterContext(ctx, opts.endpoint())
+	// exporters, err := newOTLPExporterContext(ctx, opts.endpoint())
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// err = exporters.start()
+	// if err != nil {
+	// 	return nil, err
+	// }
+	host, err := weaverC.Host(ctx)
 	if err != nil {
 		return nil, err
 	}
-	err = exporters.start()
+
+	exposePort := DefaultWeaverPort
+	if opts.Port != 0 {
+		exposePort = opts.Port
+	}
+
+	mappedPort, err := weaverC.MappedPort(ctx, nat.Port(fmt.Sprintf("%d/tcp", exposePort)))
+	if err != nil {
+		return nil, err
+	}
+
+	clients, err := newPdataClientContext(ctx, fmt.Sprintf("%s:%s", host, mappedPort.Port()))
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +94,7 @@ func NewWeaverContext(ctx context.Context, opts *WeaverOptions) (*WeaverContext,
 		ctx:             ctx,
 		weaverContainer: weaverC,
 		opts:            opts,
-		exporters:       exporters,
+		clients:         clients,
 	}, nil
 }
 
@@ -98,7 +124,18 @@ func (wc *WeaverContext) ContainerLogs() ([]string, error) {
 
 func (wc *WeaverContext) TestLogs(logs plog.Logs) error {
 	// TODO: temp
-	return wc.exporters.consumeLogs(logs)
+	// return wc.exporters.consumeLogs(logs)
+	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	response, err := wc.clients.consumeLogs(ctx, logs)
+	if err != nil {
+		return err
+	}
+	resJson, err := response.MarshalJSON()
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(resJson))
+	return nil
 }
 
 type WeaverOptions struct {
@@ -152,7 +189,7 @@ func (opts *WeaverOptions) testContainerOptions() []testcontainers.ContainerCust
 	if opts.Port != 0 {
 		exposePort = opts.Port
 	}
-	containerOpts = append(containerOpts, testcontainers.WithExposedPorts(fmt.Sprintf("%d/tcp", exposePort)))
+	containerOpts = append(containerOpts, testcontainers.WithExposedPorts(fmt.Sprintf("%d", exposePort)))
 
 	return containerOpts
 }
@@ -172,13 +209,14 @@ func (opts *WeaverOptions) cmdArgs() []string {
 		args = append(args, "--registry", opts.Registry)
 	}
 	args = append(args, "--diagnostic-format", "json")
+	fmt.Println(args)
 	return args
 }
 
 // endpoint will construct an endpoint usable by exporter settings
 // using the default values or provided options.
 func (opts *WeaverOptions) endpoint() string {
-	address := "0.0.0.0"
+	address := "localhost"
 	if opts.Address != "" {
 		address = opts.Address
 	}
@@ -187,6 +225,46 @@ func (opts *WeaverOptions) endpoint() string {
 		port = opts.Port
 	}
 	return fmt.Sprintf("%s:%d", address, port)
+}
+
+type pdataClientContext struct {
+	ctx        context.Context
+	clientConn *grpc.ClientConn
+	logs       plogotlp.GRPCClient
+	metrics    pmetricotlp.GRPCClient
+	traces     ptraceotlp.GRPCClient
+}
+
+func newPdataClientContext(ctx context.Context, endpoint string) (*pdataClientContext, error) {
+	clientConn, err := grpc.NewClient(endpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, err
+	}
+
+	clientContext := pdataClientContext{
+		ctx:        ctx,
+		clientConn: clientConn,
+	}
+	clientContext.logs = plogotlp.NewGRPCClient(clientContext.clientConn)
+	clientContext.metrics = pmetricotlp.NewGRPCClient(clientContext.clientConn)
+	clientContext.traces = ptraceotlp.NewGRPCClient(clientContext.clientConn)
+
+	return &clientContext, nil
+}
+
+func (clientCtx *pdataClientContext) consumeLogs(ctx context.Context, logs plog.Logs) (plogotlp.ExportResponse, error) {
+	plogReq := plogotlp.NewExportRequestFromLogs(logs)
+	return clientCtx.logs.Export(ctx, plogReq)
+}
+
+func (clientCtx *pdataClientContext) consumeMetrics(ctx context.Context, metrics pmetric.Metrics) (pmetricotlp.ExportResponse, error) {
+	pmetricReq := pmetricotlp.NewExportRequestFromMetrics(metrics)
+	return clientCtx.metrics.Export(ctx, pmetricReq)
+}
+
+func (clientCtx *pdataClientContext) consumeTraces(ctx context.Context, traces ptrace.Traces) (ptraceotlp.ExportResponse, error) {
+	ptraceReq := ptraceotlp.NewExportRequestFromTraces(traces)
+	return clientCtx.traces.Export(ctx, ptraceReq)
 }
 
 type otlpExporterContext struct {
